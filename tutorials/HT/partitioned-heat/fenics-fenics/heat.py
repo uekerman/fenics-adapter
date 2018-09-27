@@ -33,6 +33,7 @@ from enum import Enum
 from matplotlib import pyplot as plt
 from fenicsadapter import Coupling
 import argparse
+import mshr
 
 
 class ProblemType(Enum):
@@ -58,8 +59,8 @@ class ComplementaryBoundary(SubDomain):
 
 class CouplingBoundary(SubDomain):
     def inside(self, x, on_boundary):
-        tol = 1E-14
-        if on_boundary and near(x[0], x_coupling, tol) and not near(x[1], y_bottom, tol) and not near(x[1], y_top, tol):
+        tol = 1E-3
+        if on_boundary and near((x[0]-midpoint.x())**2 + (x[1]-midpoint.y())**2, radius**2, tol):
             return True
         else:
             return False
@@ -124,18 +125,24 @@ T = 1  # final time
 dt = .1  # time step size
 alpha = 3  # parameter alpha
 beta = 1.3  # parameter beta
-y_bottom, y_top = 0, 1
-x_left, x_right = 0, 2
-x_coupling = 1.5  # x coordinate of coupling interface
+y_bottom, y_top = 0, 2
+x_left, x_right = 0, 5
+p0 = Point(x_left, y_bottom)
+p1 = Point(x_right, y_top)
+midpoint = Point(1, 1)
+radius = .5
+n_vertices = 60
+low_resolution = 2
+high_resolution = 10
+
+whole_domain = mshr.Rectangle(p0, p1)
+circular_domain = mshr.Circle(midpoint, radius, n_vertices)
 
 if problem is ProblemType.DIRICHLET:
-    p0 = Point(x_left, y_bottom)
-    p1 = Point(x_coupling, y_top)
+    mesh = mshr.generate_mesh(whole_domain - circular_domain, low_resolution, "cgal")
 elif problem is ProblemType.NEUMANN:
-    p0 = Point(x_coupling, y_bottom)
-    p1 = Point(x_right, y_top)
+    mesh = mshr.generate_mesh(circular_domain, high_resolution, "cgal")
 
-mesh = RectangleMesh(p0, p1, nx, ny)
 V = FunctionSpace(mesh, 'P', 1)
 
 # Define boundary condition
@@ -153,12 +160,14 @@ coupling.set_coupling_mesh(mesh, coupling_boundary, coupling_mesh_name)
 if problem is ProblemType.DIRICHLET:
     coupling.set_read_field(read_data_name, u_D_function)
     coupling.set_write_field(write_data_name, f_N_function)
+    bcs = [DirichletBC(V, u_D, remaining_boundary)]
 elif problem is ProblemType.NEUMANN:
     coupling.set_read_field(read_data_name, f_N_function)
     coupling.set_write_field(write_data_name, u_D_function)
+    bcs = []
+
 coupling.initialize_data()
 
-bcs = [DirichletBC(V, u_D, remaining_boundary)]
 # Define initial value
 u_n = interpolate(u_D, V)
 u_n.rename("Temperature", "")
@@ -221,7 +230,6 @@ while coupling.is_coupling_ongoing():
         u_e = interpolate(u_D, V)
         u_e.rename("reference", " ")
         error = assemble(inner(u_e - u_np1, u_e - u_np1)/(u_e * u_e) * dx)
-        assert (error < 10e-4)
         print('n = %d, t = %.2f: error = %.3g' % (n, t, error))
         # output solution and reference solution at t_n+1
         print('output u^%d and u_ref^%d' % (n+1, n+1))
