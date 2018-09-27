@@ -122,15 +122,16 @@ elif problem is ProblemType.NEUMANN:
     write_data_name = "Temperature"
 
 T = 1  # final time
-dt = .1  # time step size
+dt = .01  # time step size
 alpha = 3  # parameter alpha
 beta = 1.3  # parameter beta
-y_bottom, y_top = 0, 2
-x_left, x_right = 0, 5
+y_bottom, y_top = 0, 10
+x_left, x_right = 0, 10
 p0 = Point(x_left, y_bottom)
 p1 = Point(x_right, y_top)
-midpoint = Point(1, 1)
+midpoint = Point(5, 5)
 radius = .5
+#ghost_radius = .7
 low_resolution = 2
 high_resolution = 10
 
@@ -143,15 +144,17 @@ if problem is ProblemType.DIRICHLET:
 elif problem is ProblemType.NEUMANN:
     n_vertices = 30
     circular_domain = mshr.Circle(midpoint, radius, n_vertices)
+    #ghost_domain = mshr.Circle(midpoint, ghost_radius, n_vertices)
     mesh = mshr.generate_mesh(circular_domain, high_resolution, "cgal")
+    #ghost_mesh = mshr.generate_mesh(ghost_domain, high_resolution, "cgal")
 
 V = FunctionSpace(mesh, 'P', 1)
 
 # Define boundary condition
-u_D = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', degree=2, alpha=alpha, beta=beta, t=0)
+u_D = Expression('0', degree=2, alpha=alpha, beta=beta, t=0)
 u_D_function = interpolate(u_D, V)
 # Define flux in x direction on coupling interface (grad(u_D) in normal direction)
-f_N = Expression('2 * x[0]', degree=1)
+f_N = Expression('0', degree=1)
 f_N_function = interpolate(f_N, V)
 
 coupling_boundary = CouplingBoundary()
@@ -177,7 +180,8 @@ u_n.rename("Temperature", "")
 # Define variational problem
 u = TrialFunction(V)
 v = TestFunction(V)
-f = Constant(beta - 2 - 2 * alpha)
+f = Expression("10 * exp(-10*(x[0] - x_focus)*(x[0] - x_focus)) * exp(-10*(x[1] - y_focus)*(x[1] - y_focus))", x_focus=midpoint.x(), y_focus=midpoint.y(), degree=2)
+#f = Constant(beta - 2 - 2 * alpha)
 F = u * v * dx + dt * dot(grad(u), grad(v)) * dx - (u_n + dt * f) * v * dx
 
 if problem is ProblemType.DIRICHLET:
