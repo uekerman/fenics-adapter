@@ -59,8 +59,8 @@ class ComplementaryBoundary(SubDomain):
 
 class CouplingBoundary(SubDomain):
     def inside(self, x, on_boundary):
-        tol = 1E-3
-        if on_boundary and near((x[0]-midpoint.x())**2 + (x[1]-midpoint.y())**2, radius**2, tol):
+        tol = 1E-14
+        if on_boundary and not near(x[0], x_left, tol) and not near(x[0], x_right, tol) and not near(x[1], y_top, tol) and not near(x[1], y_bottom, tol):
             return True
         else:
             return False
@@ -131,16 +131,18 @@ p0 = Point(x_left, y_bottom)
 p1 = Point(x_right, y_top)
 midpoint = Point(1, 1)
 radius = .5
-n_vertices = 60
 low_resolution = 2
 high_resolution = 10
 
 whole_domain = mshr.Rectangle(p0, p1)
-circular_domain = mshr.Circle(midpoint, radius, n_vertices)
 
 if problem is ProblemType.DIRICHLET:
+    n_vertices = 10
+    circular_domain = mshr.Circle(midpoint, radius, n_vertices)
     mesh = mshr.generate_mesh(whole_domain - circular_domain, low_resolution, "cgal")
 elif problem is ProblemType.NEUMANN:
+    n_vertices = 30
+    circular_domain = mshr.Circle(midpoint, radius, n_vertices)
     mesh = mshr.generate_mesh(circular_domain, high_resolution, "cgal")
 
 V = FunctionSpace(mesh, 'P', 1)
