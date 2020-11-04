@@ -308,13 +308,13 @@ class Adapter:
         for i in range(n_vertices):
             id_mapping[fenics_vertices[i].global_index()] = self._vertex_ids[i]
 
-        edge_vertex_ids1, edge_vertex_ids2 = get_coupling_boundary_edges(mesh, coupling_subdomain, id_mapping)
+        #edge_vertex_ids1, edge_vertex_ids2 = get_coupling_boundary_edges(mesh, coupling_subdomain, id_mapping)
 
         # Set mesh edges in preCICE to allow nearest-projection mapping
-        for i in range(len(edge_vertex_ids1)):
-            assert (edge_vertex_ids1[i] != edge_vertex_ids2[i])
-            self._interface.set_mesh_edge(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
-                                          edge_vertex_ids1[i], edge_vertex_ids2[i])
+        #for i in range(len(edge_vertex_ids1)):
+        #    assert (edge_vertex_ids1[i] != edge_vertex_ids2[i])
+        #    self._interface.set_mesh_edge(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
+        #                                  edge_vertex_ids1[i], edge_vertex_ids2[i])
 
         # Set read functionality parameters
         self._read_function_type = determine_function_type(function_space)
